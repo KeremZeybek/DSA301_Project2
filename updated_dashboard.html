@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Japan Inbound Immigration Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Modern CSS adopting Gestalt Principles (Proximity, Common Region) */
+        :root {
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --border-radius: 12px;
+            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 30px 20px;
+        }
+
+        .dashboard-container {
+            max-width: 1300px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .header {
+            grid-column: 1 / -1;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.2rem;
+            font-weight: 700;
+        }
+
+        .instructions {
+            grid-column: 1 / -1;
+            background-color: #e0f2fe;
+            color: #0369a1;
+            padding: 12px 20px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 500;
+            margin-bottom: 20px;
+            border: 1px solid #bae6fd;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .card h2 {
+            margin-top: 0;
+            font-size: 1.25rem;
+            color: var(--text-primary);
+            border-bottom: 2px solid var(--bg-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 350px;
+            width: 100%;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard-container">
+    <div class="header">
+        <h1>Japan Inbound Immigration Explorer</h1>
+    </div>
+    
+    <div class="instructions">
+        💡 <strong>Interactive:</strong> Click any data point on the Total Trend line to update the breakdowns for that specific year.
+    </div>
+
+    <div class="card full-width">
+        <h2>Total Immigration Trend (1950 - 2005)</h2>
+        <div class="chart-container">
+            <canvas id="lineChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2 id="continentTitle">Immigration by Continent</h2>
+        <div class="chart-container">
+            <canvas id="continentChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2 id="countryTitle">Top 10 Source Countries</h2>
+        <div class="chart-container">
+            <canvas id="countryChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Embedded Offline Dataset (Compressed) ---
+    // Format: { "Year": [Total, [Asia, Europe, Africa, NA, SA, Oceania], [[Country, Value, ContinentIndex], ...]] }
+    const rawData = {"1950": [18046, [4135, 3606, 35, 9853, 102, 188], [["United States", 9515, 3], ["China", 2095, 0], ["United Kingdom", 1669, 1], ["South Korea", 825, 0], ["Philippines", 536, 0], ["France", 501, 1], ["India", 343, 0], ["Canada", 314, 3], ["Denmark", 231, 1], ["Australia", 180, 5]]], "1951": [24268, [7049, 5483, 206, 10769, 371, 218], [["United States", 10354, 3], ["China", 3789, 0], ["United Kingdom", 2667, 1], ["South Korea", 1035, 0], ["Philippines", 868, 0], ["India", 698, 0], ["France", 558, 1], ["Canada", 330, 3], ["Brazil", 300, 4], ["Sweden", 276, 1]]], "1955": [55638, [14533, 10305, 220, 29370, 465, 579], [["United States", 27908, 3], ["China", 6449, 0], ["United Kingdom", 4589, 1], ["Philippines", 2476, 0], ["France", 1318, 1], ["India", 1292, 0], ["Canada", 1244, 3], ["South Korea", 1227, 0], ["Thailand", 1145, 0], ["Germany", 942, 1]]], "1960": [146881, [29629, 23181, 854, 86353, 1658, 5077], [["United States", 81730, 3], ["China", 7898, 0], ["United Kingdom", 7820, 1], ["South Korea", 5752, 0], ["Philippines", 5508, 0], ["Australia", 4311, 5], ["Canada", 3234, 3], ["Germany", 3184, 1], ["India", 2680, 0], ["France", 2528, 1]]], "1965": [291309, [66347, 48169, 2468, 161454, 3308, 8893], [["United States", 150253, 3], ["South Korea", 17065, 0], ["Taiwan", 15583, 0], ["United Kingdom", 15518, 1], ["Philippines", 8945, 0], ["Canada", 8320, 3], ["Germany", 7599, 1], ["Australia", 7550, 5], ["France", 6082, 1], ["Indonesia", 4656, 0]]], "1970": [775061, [211684, 147449, 6751, 367910, 13789, 26392], [["United States", 315211, 3], ["South Korea", 71790, 0], ["Taiwan", 46535, 0], ["Canada", 42589, 3], ["United Kingdom", 36777, 1], ["Germany", 23734, 1], ["Australia", 21265, 5], ["France", 21168, 1], ["Philippines", 20477, 0], ["India", 15276, 0]]], "1975": [780298, [306773, 149832, 7801, 270788, 15051, 28528], [["United States", 237219, 3], ["South Korea", 129186, 0], ["Taiwan", 77091, 0], ["United Kingdom", 45872, 1], ["Germany", 26101, 1], ["Australia", 24449, 5], ["Canada", 23565, 3], ["China Hong Kong", 19318, 0], ["France", 15983, 1], ["Philippines", 12574, 0]]], "1980": [1295866, [640637, 249806, 11394, 334638, 27294, 29959], [["United States", 277980, 3], ["Taiwan", 235549, 0], ["South Korea", 212973, 0], ["United Kingdom", 89368, 1], ["Canada", 40821, 3], ["Germany", 40532, 1], ["China Hong Kong", 32239, 0], ["Philippines", 27902, 0], ["France", 25855, 1], ["Australia", 23985, 5]]], "1985": [2259894, [1168254, 410735, 13709, 564522, 25862, 71941], [["United States", 487713, 3], ["Taiwan", 356934, 0], ["South Korea", 296708, 0], ["United Kingdom", 183863, 1], ["China", 100972, 0], ["Malaysia", 71021, 0], ["Philippines", 65529, 0], ["Canada", 61270, 3], ["Australia", 53553, 5], ["Germany", 49604, 1]]], "1990": [3504470, [2164373, 516450, 12095, 644525, 92863, 71547], [["South Korea", 978984, 0], ["Taiwan", 610652, 0], ["United States", 564958, 3], ["United Kingdom", 212043, 1], ["China", 117814, 0], ["Philippines", 108292, 0], ["Thailand", 69477, 0], ["Brazil", 67303, 4], ["Germany", 66827, 1], ["Canada", 64791, 3]]], "1995": [3732450, [2344748, 513915, 14332, 648800, 117419, 91723], [["South Korea", 1103566, 0], ["Taiwan", 614931, 0], ["United States", 558474, 3], ["China", 229965, 0], ["United Kingdom", 131105, 1], ["Philippines", 105838, 0], ["Brazil", 90322, 4], ["Canada", 77125, 3], ["United Kingdom Hong Kong", 72811, 1], ["Germany", 69939, 1]]], "2000": [5272095, [3222982, 814912, 20643, 890771, 135770, 184974], [["South Korea", 1286583, 0], ["Taiwan", 944019, 0], ["United States", 749343, 3], ["China", 385296, 0], ["United Kingdom", 198675, 1], ["United Kingdom Hong Kong", 192946, 1], ["Philippines", 169755, 0], ["Australia", 150046, 5], ["Canada", 122260, 3], ["Brazil", 101513, 4]]], "2005": [7450103, [5134673, 874247, 28782, 1035301, 125973, 249945], [["South Korea", 2008418, 0], ["Taiwan", 1315594, 0], ["United States", 853845, 3], ["China", 780924, 0], ["China Hong Kong", 250366, 0], ["United Kingdom", 229758, 1], ["Philippines", 221309, 0], ["Australia", 210043, 5], ["Canada", 154571, 3], ["Thailand", 136868, 0]]]};
+
+    // Derived properties
+    const years = Object.keys(rawData).sort();
+    const totals = years.map(y => rawData[y][0]);
+    
+    // Setup categorical colors for continents
+    const continentsInfo = [
+        { label: 'Asia', color: '#ef4444' },          // Red
+        { label: 'Europe', color: '#10b981' },        // Green
+        { label: 'Africa', color: '#ec4899' },        // Pink
+        { label: 'North America', color: '#3b82f6' }, // Blue
+        { label: 'South America', color: '#f59e0b' }, // Orange
+        { label: 'Oceania', color: '#8b5cf6' }        // Purple
+    ];
+
+    let lineChart, continentChart, countryChart;
+    let activeYear = years[years.length - 1]; // Default: 2005
+
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.color = "#475569";
+
+    // 1. Line Chart (Total Trend)
+    function buildLineChart() {
+        const ctx = document.getElementById('lineChart').getContext('2d');
+        lineChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: years,
+                datasets: [{
+                    label: 'Total Inbound',
+                    data: totals,
+                    borderColor: '#1e293b', // Constraint: Dark grey / neutral
+                    backgroundColor: 'rgba(30, 41, 59, 0.05)',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#1e293b',
+                    pointRadius: 4,
+                    pointHoverRadius: 8,
+                    pointHoverBackgroundColor: '#ef4444', // Interaction cue
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                    x: { grid: { display: false } }
+                },
+                onClick: (e, elements) => {
+                    if (elements.length > 0) {
+                        const clickedYear = years[elements[0].index];
+                        updateCrossFilters(clickedYear);
+                    }
+                }
+            }
+        });
+    }
+
+    // Update bottom charts based on selected year
+    function updateCrossFilters(year) {
+        activeYear = year;
+        const yearData = rawData[year];
+        
+        // Update Titles
+        document.getElementById('continentTitle').innerText = `Immigration by Continent (${year})`;
+        document.getElementById('countryTitle').innerText = `Top 10 Source Countries (${year})`;
+
+        // --- Continent Chart Logic ---
+        let contDataset = continentsInfo.map((info, idx) => ({
+            label: info.label,
+            value: yearData[1][idx],
+            color: info.color
+        }));
+        // Constraint: Horizontally sorted
+        contDataset.sort((a, b) => b.value - a.value);
+
+        if (!continentChart) {
+            continentChart = new Chart(document.getElementById('continentChart'), {
+                type: 'bar',
+                data: {
+                    labels: contDataset.map(d => d.label),
+                    datasets: [{
+                        data: contDataset.map(d => d.value),
+                        backgroundColor: contDataset.map(d => d.color),
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Horizontal bars
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: '#f1f5f9' } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+        } else {
+            continentChart.data.labels = contDataset.map(d => d.label);
+            continentChart.data.datasets[0].data = contDataset.map(d => d.value);
+            continentChart.data.datasets[0].backgroundColor = contDataset.map(d => d.color);
+            continentChart.update();
+        }
+
+        // --- Top 10 Countries Logic ---
+        const topCountries = yearData[2]; // [[Name, Value, ContinentIndex], ...]
+        const countryLabels = topCountries.map(c => c[0]);
+        const countryValues = topCountries.map(c => c[1]);
+        // Constraint: Color perfectly matches parent continent
+        const countryColors = topCountries.map(c => continentsInfo[c[2]].color);
+
+        if (!countryChart) {
+            countryChart = new Chart(document.getElementById('countryChart'), {
+                type: 'bar',
+                data: {
+                    labels: countryLabels,
+                    datasets: [{
+                        data: countryValues,
+                        backgroundColor: countryColors,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Horizontal is best for country names readability
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: '#f1f5f9' } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+        } else {
+            countryChart.data.labels = countryLabels;
+            countryChart.data.datasets[0].data = countryValues;
+            countryChart.data.datasets[0].backgroundColor = countryColors;
+            countryChart.update();
+        }
+    }
+
+    // Initialize the app
+    window.onload = () => {
+        buildLineChart();
+        updateCrossFilters(activeYear);
+    };
+</script>
+</body>
+</html>
