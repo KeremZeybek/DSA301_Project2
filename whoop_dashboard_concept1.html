@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WHOOP Dashboard — Concept 1</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #060a0f;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    padding: 40px 20px 60px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+
+  h1.page-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #2a3540;
+    margin-bottom: 32px;
+    text-align: center;
+  }
+
+  .phone-shell {
+    width: 340px;
+    background: #0d1117;
+    border-radius: 48px;
+    padding: 0 0 36px;
+    box-shadow:
+      0 0 0 10px #0a0e13,
+      0 0 0 11px #1c2128,
+      0 40px 80px rgba(0,0,0,0.8);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .notch {
+    width: 100px; height: 26px;
+    background: #0a0e13;
+    border-radius: 0 0 14px 14px;
+    margin: 0 auto;
+  }
+
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 28px 0;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: #2d3748;
+    letter-spacing: 0.08em;
+  }
+
+  .content {
+    padding: 16px 20px 0;
+  }
+
+  .section-label {
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #2d3748;
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 4px;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid #161b22;
+    margin: 16px 0;
+  }
+
+  .tile-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .tile {
+    flex: 1;
+    background: #161b22;
+    border-radius: 14px;
+    padding: 13px 15px;
+    border: 1px solid #21262d;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .tile-label {
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #2d3748;
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 6px;
+  }
+
+  .tile-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .tile-sub {
+    font-size: 10px;
+    color: #2d3748;
+    margin-top: 4px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .tile-sparkline {
+    margin-top: 8px;
+  }
+
+  .sleep-block {
+    background: #161b22;
+    border-radius: 14px;
+    padding: 14px 15px;
+    border: 1px solid #21262d;
+    margin-bottom: 10px;
+  }
+
+  .sleep-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .sleep-total {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: #8b949e;
+  }
+
+  .sleep-legend {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    color: #4a5568;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .legend-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .strain-block {
+    background: #161b22;
+    border-radius: 14px;
+    padding: 14px 15px;
+    border: 1px solid #21262d;
+    margin-bottom: 10px;
+  }
+
+  .strain-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .cals-block {
+    background: #161b22;
+    border-radius: 14px;
+    padding: 13px 15px;
+    border: 1px solid #21262d;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .cals-right {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: #2d3748;
+    text-align: right;
+    line-height: 1.6;
+  }
+
+  .tooltip {
+    position: absolute;
+    background: #161b22;
+    border: 1px solid #22d3a020;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: #8b949e;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+    z-index: 100;
+  }
+
+  .tooltip strong {
+    color: #22d3a0;
+    display: block;
+    font-size: 13px;
+    margin-bottom: 2px;
+  }
+
+  .day-selector {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+    max-width: 340px;
+  }
+
+  .day-btn {
+    background: #0d1117;
+    border: 1px solid #21262d;
+    border-radius: 8px;
+    color: #4a5568;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .day-btn:hover {
+    border-color: #22d3a040;
+    color: #8b949e;
+  }
+
+  .day-btn.active {
+    background: #22d3a015;
+    border-color: #22d3a060;
+    color: #22d3a0;
+  }
+
+  .legend-bar {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-top: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+  }
+
+  .legend-bar span {
+    display: flex; align-items: center; gap: 5px;
+  }
+
+  .lb-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+</style>
+</head>
+<body>
+
+<h1 class="page-title">WHOOP · Concept 1 · Dark Organic · D3.js</h1>
+
+<div class="phone-shell" id="phone">
+  <div class="notch"></div>
+  <div class="status-bar">
+    <span id="clock">07:14</span>
+    <span>MON · JAN 02</span>
+  </div>
+
+  <div class="content">
+
+    <!-- Recovery Ring -->
+    <div style="text-align:center; margin: 8px 0 4px;">
+      <div class="section-label" style="text-align:center;">Recovery</div>
+      <div id="ring-container"></div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- HRV + RHR tiles -->
+    <div class="tile-row">
+      <div class="tile" id="hrv-tile">
+        <div class="tile-label">HRV</div>
+        <div class="tile-value" id="hrv-val" style="color:#818cf8;"></div>
+        <div class="tile-sub" id="hrv-sub"></div>
+        <div class="tile-sparkline" id="hrv-spark"></div>
+      </div>
+      <div class="tile" id="rhr-tile">
+        <div class="tile-label">Resting HR</div>
+        <div class="tile-value" id="rhr-val" style="color:#e2e8f0;"></div>
+        <div class="tile-sub" id="rhr-sub"></div>
+        <div class="tile-sparkline" id="rhr-spark"></div>
+      </div>
+    </div>
+
+    <!-- Sleep Architecture -->
+    <div class="sleep-block">
+      <div class="sleep-header">
+        <span class="section-label" style="margin:0;">Sleep Architecture</span>
+        <span class="sleep-total" id="sleep-total"></span>
+      </div>
+      <div id="sleep-bar-container"></div>
+      <div class="sleep-legend" id="sleep-legend"></div>
+    </div>
+
+    <!-- Strain -->
+    <div class="strain-block">
+      <div class="strain-header">
+        <span class="section-label" style="margin:0;">Day Strain</span>
+        <span style="font-family:'Syne',sans-serif; font-size:18px; font-weight:700; color:#f59e0b;" id="strain-val"></span>
+      </div>
+      <div id="strain-track-container"></div>
+    </div>
+
+    <!-- Calories -->
+    <div class="cals-block">
+      <div>
+        <div class="tile-label">Calories Burned</div>
+        <div class="tile-value" id="cals-val" style="color:#fb7185;font-family:'Syne',sans-serif;"></div>
+      </div>
+      <div class="cals-right" id="cals-right">kcal<br>today</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Day selector -->
+<div class="day-selector" id="day-selector"></div>
+
+<!-- Legend -->
+<div class="legend-bar">
+  <span><div class="lb-dot" style="background:#22d3a0"></div> Recovery</span>
+  <span><div class="lb-dot" style="background:#818cf8"></div> HRV</span>
+  <span><div class="lb-dot" style="background:#f59e0b"></div> Strain</span>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const DATA = [
+  {date:"Jan 01",recovery_score:57.8,day_strain:7.33,hrv:118.3,light_sleep_hours:3.68,deep_sleep_hours:1.22,rem_sleep_hours:1.23,calories_burned:2849,resting_heart_rate:61.5,sleep_performance:100},
+  {date:"Jan 02",recovery_score:62.6,day_strain:10.38,hrv:105.7,light_sleep_hours:3.97,deep_sleep_hours:0.95,rem_sleep_hours:1.41,calories_burned:3201,resting_heart_rate:57.5,sleep_performance:100},
+  {date:"Jan 03",recovery_score:81.5,day_strain:7.16,hrv:95.3,light_sleep_hours:3.7,deep_sleep_hours:0.95,rem_sleep_hours:1.52,calories_burned:2697,resting_heart_rate:56.7,sleep_performance:100},
+  {date:"Jan 04",recovery_score:55.0,day_strain:16.47,hrv:76.2,light_sleep_hours:3.94,deep_sleep_hours:1.0,rem_sleep_hours:1.55,calories_burned:4175,resting_heart_rate:60.8,sleep_performance:100},
+  {date:"Jan 05",recovery_score:62.5,day_strain:16.67,hrv:94.4,light_sleep_hours:4.14,deep_sleep_hours:1.04,rem_sleep_hours:1.49,calories_burned:4116,resting_heart_rate:65.6,sleep_performance:100},
+  {date:"Jan 06",recovery_score:49.9,day_strain:7.56,hrv:97.7,light_sleep_hours:4.19,deep_sleep_hours:1.32,rem_sleep_hours:1.78,calories_burned:2892,resting_heart_rate:53.3,sleep_performance:100},
+  {date:"Jan 07",recovery_score:50.0,day_strain:6.96,hrv:101.8,light_sleep_hours:3.38,deep_sleep_hours:0.96,rem_sleep_hours:1.28,calories_burned:2935,resting_heart_rate:59.9,sleep_performance:100},
+  {date:"Jan 08",recovery_score:64.2,day_strain:9.98,hrv:121.9,light_sleep_hours:3.49,deep_sleep_hours:1.0,rem_sleep_hours:1.32,calories_burned:3443,resting_heart_rate:61.3,sleep_performance:100},
+  {date:"Jan 09",recovery_score:56.2,day_strain:13.16,hrv:95.8,light_sleep_hours:3.96,deep_sleep_hours:1.12,rem_sleep_hours:1.33,calories_burned:3895,resting_heart_rate:56.7,sleep_performance:100},
+  {date:"Jan 10",recovery_score:72.1,day_strain:16.45,hrv:108.4,light_sleep_hours:2.43,deep_sleep_hours:0.65,rem_sleep_hours:0.95,calories_burned:4270,resting_heart_rate:61.2,sleep_performance:100},
+  {date:"Jan 11",recovery_score:71.4,day_strain:15.92,hrv:95.3,light_sleep_hours:4.26,deep_sleep_hours:1.11,rem_sleep_hours:1.42,calories_burned:4545,resting_heart_rate:59.0,sleep_performance:100},
+  {date:"Jan 12",recovery_score:50.8,day_strain:8.14,hrv:99.9,light_sleep_hours:3.03,deep_sleep_hours:0.81,rem_sleep_hours:1.28,calories_burned:3195,resting_heart_rate:56.8,sleep_performance:100},
+  {date:"Jan 13",recovery_score:80.3,day_strain:13.64,hrv:97.5,light_sleep_hours:2.83,deep_sleep_hours:0.98,rem_sleep_hours:1.13,calories_burned:4081,resting_heart_rate:52.0,sleep_performance:100},
+  {date:"Jan 14",recovery_score:65.7,day_strain:6.02,hrv:114.7,light_sleep_hours:3.48,deep_sleep_hours:1.22,rem_sleep_hours:1.46,calories_burned:2660,resting_heart_rate:49.6,sleep_performance:100},
+];
+
+let currentIdx = 1;
+const tooltip = document.getElementById('tooltip');
+
+function recoveryColor(score) {
+  if (score >= 67) return '#22d3a0';
+  if (score >= 34) return '#f59e0b';
+  return '#fb7185';
+}
+
+function recoveryLabel(score) {
+  if (score >= 67) return 'Optimal ↑';
+  if (score >= 34) return 'Moderate';
+  return 'Low — rest up';
+}
+
+/* ── Recovery Ring ── */
+function drawRing(d, animate) {
+  d3.select('#ring-container').selectAll('*').remove();
+
+  const W = 190, H = 190, R = 78, stroke = 13;
+  const pct = d.recovery_score / 100;
+  const color = recoveryColor(d.recovery_score);
+  const circumference = 2 * Math.PI * R;
+
+  const svg = d3.select('#ring-container')
+    .append('svg')
+    .attr('width', W).attr('height', H)
+    .attr('viewBox', `0 0 ${W} ${H}`);
+
+  const g = svg.append('g').attr('transform', `translate(${W/2},${H/2})`);
+
+  /* track */
+  g.append('circle')
+    .attr('r', R).attr('fill', 'none')
+    .attr('stroke', '#1c2128').attr('stroke-width', stroke);
+
+  /* dim fill showing baseline 33% */
+  g.append('circle')
+    .attr('r', R).attr('fill', 'none')
+    .attr('stroke', color).attr('stroke-width', stroke)
+    .attr('stroke-dasharray', circumference)
+    .attr('stroke-dashoffset', circumference * (1 - 0.33))
+    .attr('stroke-linecap', 'round')
+    .attr('transform', 'rotate(-90)')
+    .attr('opacity', 0.18);
+
+  /* main arc */
+  const arc = g.append('circle')
+    .attr('r', R).attr('fill', 'none')
+    .attr('stroke', color).attr('stroke-width', stroke)
+    .attr('stroke-dasharray', circumference)
+    .attr('stroke-dashoffset', circumference)
+    .attr('stroke-linecap', 'round')
+    .attr('transform', 'rotate(-90)');
+
+  if (animate) {
+    arc.transition().duration(900).ease(d3.easeCubicOut)
+      .attr('stroke-dashoffset', circumference * (1 - pct));
+  } else {
+    arc.attr('stroke-dashoffset', circumference * (1 - pct));
+  }
+
+  /* tick marks at 33 and 67 */
+  [33, 67].forEach(t => {
+    const angle = (t / 100) * 2 * Math.PI - Math.PI / 2;
+    const r1 = R - stroke / 2 - 1, r2 = R + stroke / 2 + 1;
+    g.append('line')
+      .attr('x1', Math.cos(angle) * r1).attr('y1', Math.sin(angle) * r1)
+      .attr('x2', Math.cos(angle) * r2).attr('y2', Math.sin(angle) * r2)
+      .attr('stroke', '#0d1117').attr('stroke-width', 2);
+  });
+
+  /* center text */
+  g.append('text')
+    .attr('text-anchor', 'middle').attr('dy', '-0.1em')
+    .attr('fill', color)
+    .attr('font-family', 'Syne, sans-serif')
+    .attr('font-weight', '800')
+    .attr('font-size', '48')
+    .text(Math.round(d.recovery_score));
+
+  g.append('text')
+    .attr('text-anchor', 'middle').attr('dy', '1.3em')
+    .attr('fill', color).attr('fill-opacity', 0.5)
+    .attr('font-family', 'Plus Jakarta Sans, sans-serif')
+    .attr('font-weight', '400')
+    .attr('font-size', '13')
+    .text('%');
+
+  g.append('text')
+    .attr('text-anchor', 'middle').attr('dy', '3.2em')
+    .attr('fill', color).attr('fill-opacity', 0.7)
+    .attr('font-family', 'DM Mono, monospace')
+    .attr('font-size', '10')
+    .attr('letter-spacing', '0.08em')
+    .text(recoveryLabel(d.recovery_score).toUpperCase());
+}
+
+/* ── Sparkline ── */
+function drawSparkline(containerId, values, color) {
+  const el = document.getElementById(containerId);
+  d3.select('#' + containerId).selectAll('*').remove();
+
+  const W = 110, H = 28;
+  const svg = d3.select('#' + containerId)
+    .append('svg').attr('width', W).attr('height', H);
+
+  const x = d3.scaleLinear().domain([0, values.length - 1]).range([2, W - 2]);
+  const y = d3.scaleLinear()
+    .domain([d3.min(values) * 0.95, d3.max(values) * 1.05])
+    .range([H - 2, 2]);
+
+  const line = d3.line()
+    .x((d, i) => x(i)).y(d => y(d))
+    .curve(d3.curveCatmullRom.alpha(0.5));
+
+  const area = d3.area()
+    .x((d, i) => x(i)).y0(H).y1(d => y(d))
+    .curve(d3.curveCatmullRom.alpha(0.5));
+
+  const gradId = 'grad-' + containerId;
+  const defs = svg.append('defs');
+  const grad = defs.append('linearGradient')
+    .attr('id', gradId).attr('x1', '0').attr('y1', '0')
+    .attr('x2', '0').attr('y2', '1');
+  grad.append('stop').attr('offset', '0%').attr('stop-color', color).attr('stop-opacity', 0.25);
+  grad.append('stop').attr('offset', '100%').attr('stop-color', color).attr('stop-opacity', 0);
+
+  svg.append('path').datum(values)
+    .attr('fill', `url(#${gradId})`).attr('d', area);
+
+  svg.append('path').datum(values)
+    .attr('fill', 'none')
+    .attr('stroke', color)
+    .attr('stroke-width', 1.5)
+    .attr('d', line);
+
+  /* last dot */
+  svg.append('circle')
+    .attr('cx', x(values.length - 1))
+    .attr('cy', y(values[values.length - 1]))
+    .attr('r', 3).attr('fill', color);
+}
+
+/* ── Sleep Bar ── */
+function drawSleepBar(d) {
+  d3.select('#sleep-bar-container').selectAll('*').remove();
+
+  const total = d.light_sleep_hours + d.rem_sleep_hours + d.deep_sleep_hours;
+  const segments = [
+    { label: 'Light', hours: d.light_sleep_hours, color: '#374151' },
+    { label: 'REM',   hours: d.rem_sleep_hours,   color: '#818cf8' },
+    { label: 'Deep',  hours: d.deep_sleep_hours,  color: '#22d3a0' },
+  ];
+
+  document.getElementById('sleep-total').textContent =
+    total.toFixed(1) + ' hrs';
+
+  const W = 290, H = 12;
+  const svg = d3.select('#sleep-bar-container')
+    .append('svg').attr('width', W).attr('height', H);
+
+  const x = d3.scaleLinear().domain([0, total]).range([0, W]);
+  let cursor = 0;
+
+  segments.forEach((seg, i) => {
+    const bw = x(seg.hours);
+    svg.append('rect')
+      .attr('x', cursor + (i > 0 ? 2 : 0))
+      .attr('y', 0).attr('width', 0).attr('height', H)
+      .attr('rx', i === 0 ? 6 : i === segments.length - 1 ? 6 : 0)
+      .attr('fill', seg.color)
+      .on('mouseover', (event) => {
+        tooltip.style.opacity = '1';
+        tooltip.innerHTML = `<strong>${seg.label}</strong>${seg.hours.toFixed(2)}h`;
+      })
+      .on('mousemove', (event) => {
+        const rect = document.getElementById('phone').getBoundingClientRect();
+        tooltip.style.left = (event.clientX - rect.left + 10) + 'px';
+        tooltip.style.top = (event.clientY - rect.top - 36) + 'px';
+      })
+      .on('mouseout', () => { tooltip.style.opacity = '0'; })
+      .transition().duration(600).delay(i * 120).ease(d3.easeCubicOut)
+      .attr('width', bw - (i > 0 ? 2 : 0));
+
+    cursor += bw;
+  });
+
+  /* Legend */
+  const legEl = document.getElementById('sleep-legend');
+  legEl.innerHTML = '';
+  segments.forEach(seg => {
+    legEl.innerHTML += `
+      <div class="legend-item">
+        <div class="legend-dot" style="background:${seg.color}"></div>
+        ${seg.label} ${seg.hours.toFixed(2)}h
+      </div>`;
+  });
+}
+
+/* ── Strain Track ── */
+function drawStrainTrack(d) {
+  d3.select('#strain-track-container').selectAll('*').remove();
+
+  const val = d.day_strain;
+  document.getElementById('strain-val').textContent =
+    val.toFixed(1) + ' / 21';
+
+  const W = 290, H = 7;
+  const pct = val / 21;
+  const color = pct < 0.4 ? '#22d3a0' : pct < 0.7 ? '#f59e0b' : '#fb7185';
+
+  const svg = d3.select('#strain-track-container')
+    .append('svg').attr('width', W).attr('height', H);
+
+  svg.append('rect')
+    .attr('x', 0).attr('y', 0).attr('width', W).attr('height', H)
+    .attr('rx', 3).attr('fill', '#21262d');
+
+  const ticks = [7, 14];
+  ticks.forEach(t => {
+    svg.append('rect')
+      .attr('x', (t / 21) * W - 0.5).attr('y', 0)
+      .attr('width', 1).attr('height', H)
+      .attr('fill', '#0d1117').attr('opacity', 0.6);
+  });
+
+  svg.append('rect')
+    .attr('x', 0).attr('y', 0).attr('width', 0).attr('height', H)
+    .attr('rx', 3).attr('fill', color)
+    .transition().duration(700).ease(d3.easeCubicOut)
+    .attr('width', pct * W);
+}
+
+/* ── Main update ── */
+function update(idx, animate) {
+  const d = DATA[idx];
+  currentIdx = idx;
+
+  /* ring */
+  drawRing(d, animate);
+
+  /* HRV */
+  const hrvVals = DATA.slice(0, idx + 1).map(r => r.hrv);
+  const hrvAvg = d3.mean(DATA.map(r => r.hrv));
+  document.getElementById('hrv-val').textContent = Math.round(d.hrv);
+  document.getElementById('hrv-sub').textContent = `ms · avg ${Math.round(hrvAvg)}`;
+  drawSparkline('hrv-spark', hrvVals, '#818cf8');
+
+  /* RHR */
+  const rhrVals = DATA.slice(0, idx + 1).map(r => r.resting_heart_rate);
+  const rhrAvg = d3.mean(DATA.map(r => r.resting_heart_rate));
+  document.getElementById('rhr-val').textContent = Math.round(d.resting_heart_rate);
+  document.getElementById('rhr-sub').textContent = `bpm · avg ${Math.round(rhrAvg)}`;
+  drawSparkline('rhr-spark', rhrVals, '#e2e8f0');
+
+  /* sleep */
+  drawSleepBar(d);
+
+  /* strain */
+  drawStrainTrack(d);
+
+  /* cals */
+  document.getElementById('cals-val').textContent =
+    d.calories_burned.toLocaleString();
+
+  /* buttons */
+  document.querySelectorAll('.day-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === idx);
+  });
+}
+
+/* ── Day selector buttons ── */
+const selector = document.getElementById('day-selector');
+DATA.forEach((d, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'day-btn' + (i === 1 ? ' active' : '');
+  btn.textContent = d.date;
+  btn.addEventListener('click', () => update(i, true));
+  selector.appendChild(btn);
+});
+
+/* Clock tick */
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  document.getElementById('clock').textContent = h + ':' + m;
+}
+updateClock();
+setInterval(updateClock, 30000);
+
+/* Initial render */
+update(1, true);
+</script>
+</body>
+</html>
