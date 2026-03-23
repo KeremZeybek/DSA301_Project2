@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Japan Inbound Immigration Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Modern CSS adopting Gestalt Principles (Proximity, Figure/Ground) */
+        :root {
+            --bg-color: #f0f4f8;
+            --card-bg: #ffffff;
+            --text-primary: #102a43;
+            --text-secondary: #627d98;
+            --border-radius: 16px;
+            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 30px 20px;
+        }
+
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-top: 8px;
+        }
+
+        /* Grid Layout creating clear Structure and Proximity */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 24px;
+            transition: transform 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .card h2 {
+            margin-top: 0;
+            font-size: 1.25rem;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--bg-color);
+            padding-bottom: 10px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 350px;
+            width: 100%;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard-container">
+    <div class="header">
+        <h1>Japan Immigration Overview</h1>
+        <p>Interactive insights analyzing historical inbound statistics up to 2005</p>
+    </div>
+
+    <div class="grid">
+        <div class="card full-width">
+            <h2>Total Immigration Over Time (1950 - 2005)</h2>
+            <div class="chart-container">
+                <canvas id="lineChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Immigration by Continent (2005)</h2>
+            <div class="chart-container" style="height: 300px;">
+                <canvas id="pieChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Top 10 Source Countries (2005)</h2>
+            <div class="chart-container" style="height: 300px;">
+                <canvas id="barChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Data Extracted from your CSV ---
+    const years = [1950, 1951, 1952, 1953, 1954, 1955, 1956, 1957, 1958, 1959, 1960, 1961, 1962, 1963, 1964, 1965, 1966, 1967, 1968, 1969, 1970, 1971, 1972, 1973, 1974, 1975, 1976, 1977, 1978, 1979, 1980, 1981, 1982, 1983, 1984, 1985, 1986, 1987, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005];
+    const totals = [18046, 24268, 32262, 46857, 47425, 55638, 66356, 80361, 96514, 118020, 146881, 180048, 202181, 227289, 273551, 291309, 338584, 375929, 418522, 515116, 775061, 598061, 662474, 740738, 724017, 780298, 881203, 983069, 1017149, 1089341, 1295866, 1552296, 1708306, 1900597, 2036488, 2259894, 2021450, 2161275, 2414447, 2985764, 3504470, 3855952, 3926347, 3747157, 3831367, 3732450, 4244529, 4669514, 4556845, 4901317, 5272095, 5286310, 5771975, 5727240, 6756830, 7450103];
+    
+    const continentsLabels = ["Asia", "North America", "Europe", "Oceania", "South America", "Africa"];
+    const continentsData = [5134673, 1035301, 874247, 249945, 125973, 28782];
+    
+    const countriesLabels = ["South Korea", "Taiwan", "United States", "China", "Hong Kong", "United Kingdom", "Philippines", "Australia", "Canada", "Thailand"];
+    const countriesData = [2008418, 1315594, 853845, 780924, 250366, 229758, 221309, 210043, 154571, 136868];
+
+    // Common configurations
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.color = "#627d98";
+
+    // 1. Line Chart: Total Immigration over years
+    const ctxLine = document.getElementById('lineChart').getContext('2d');
+    new Chart(ctxLine, {
+        type: 'line',
+        data: {
+            labels: years,
+            datasets: [{
+                label: 'Total Immigrants',
+                data: totals,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 2,
+                pointRadius: 0,
+                pointHoverRadius: 6,
+                fill: true,
+                tension: 0.3 // Smooth curves
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { mode: 'index', intersect: false }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#e2e8f0' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    // 2. Pie Chart: Continent breakdown (2005)
+    const ctxPie = document.getElementById('pieChart').getContext('2d');
+    new Chart(ctxPie, {
+        type: 'doughnut', // Doughnuts generally look cleaner than full pies
+        data: {
+            labels: continentsLabels,
+            datasets: [{
+                data: continentsData,
+                backgroundColor: [
+                    '#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444', '#64748b'
+                ],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'right' }
+            },
+            cutout: '60%' // Gives it a modern doughnut aesthetic
+        }
+    });
+
+    // 3. Horizontal Bar Chart: Top Countries (2005)
+    const ctxBar = document.getElementById('barChart').getContext('2d');
+    new Chart(ctxBar, {
+        type: 'bar',
+        data: {
+            labels: countriesLabels,
+            datasets: [{
+                label: 'Immigrants',
+                data: countriesData,
+                backgroundColor: '#6366f1',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            indexAxis: 'y', // Makes it horizontal
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: { grid: { color: '#e2e8f0' } },
+                y: { grid: { display: false } }
+            }
+        }
+    });
+</script>
+
+</body>
+</html>
